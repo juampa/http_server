@@ -1,4 +1,4 @@
-use std::io::Read;
+use std::io::{Read, Write};
 use std::net::TcpListener;
 use std::convert::TryFrom;
 use std::convert::TryInto;
@@ -31,7 +31,10 @@ impl Server {
                             println!("Received request {} ", String::from_utf8_lossy(&buffer));
                 
                             match Request::try_from(&buffer[..]) {
-                                Ok(request) => {}
+                                Ok(request) => {
+                                    dbg!(request);
+                                    write!(stream, "HTTP/1.1 404 NOT Found \r\n\r\n");
+                                }
                                 Err(e) => println!("Failed to parse a request: {}", e)   
                             }
                             

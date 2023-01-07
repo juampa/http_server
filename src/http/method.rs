@@ -1,4 +1,6 @@
 use std::{str::FromStr, mem::uninitialized};
+
+#[derive(Debug)]
 pub enum Method {
     GET,
     POST,

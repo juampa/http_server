@@ -1,26 +1,23 @@
-use core::str::Utf8Error;
 use super::method::{Method, MethodError};
+use super::QueryString;
 use std::convert::TryFrom;
 use std::error::Error;
-use std::fmt::Display;
-use std::fmt::Debug;
-use std::fmt::Formatter;
-use std::fmt::Result as FmtResult;
-use std::str; 
+use std::fmt::{Debug, Display, Formatter, Result as FmtResult} ;
+use std::str;
+use std::str::Utf8Error;
 
-// Request struct, no body or headers.
-pub struct Request<'buf>{
+#[derive(Debug)]
+pub struct Request<'buf> {
     path: &'buf str,
-    query_string: Option<&'buf str>,
+    query_string: Option<QueryString<'buf>>,
     method: Method,
 }
 
 impl<'buf> TryFrom<&'buf [u8]> for Request<'buf> {
-    type Error = ParseError ;
+    type Error = ParseError;
 
     // GET /search?name=abc&sort=1 HTTP/1.1\r\n..HEADERS..
     fn try_from(buf: &'buf [u8]) -> Result<Request<'buf>, Self::Error> {
-
         let request = str::from_utf8(buf)?;
 
         let (method, request) = get_next_word(request).ok_or(ParseError::InvalidRequest)?;
@@ -33,12 +30,12 @@ impl<'buf> TryFrom<&'buf [u8]> for Request<'buf> {
 
         let method: Method = method.parse()?;
 
-        let mut query_string = None ;
+        let mut query_string = None;
         if let Some(i) = path.find('?') {
-            query_string = Some(&path[i + 1..]);
+            query_string = Some(QueryString::from(&path[i + 1..]));
             path = &path[..i];
         }
-        
+
         Ok(Self {
             path,
             query_string,
@@ -48,10 +45,10 @@ impl<'buf> TryFrom<&'buf [u8]> for Request<'buf> {
 }
 
 fn get_next_word(request: &str) -> Option<(&str, &str)> {
-    for (i,c) in request.chars().enumerate() {
+    for (i, c) in request.chars().enumerate() {
         if c == ' ' || c == '\r' {
             // Esto funciona porque el espacio en blanco es 1 byte, incluso en UFT8.
-            return Some((&request[..i], &request[i+1..]));
+            return Some((&request[..i], &request[i + 1..]));
         }
     }
     None
@@ -70,20 +67,20 @@ impl ParseError {
             Self::InvalidRequest => "Invalid Request",
             Self::InvalidEncoding => "Invalid Encoding",
             Self::InvalidProtocol => "Invalid Protocol",
-            Self::InvalidMethod => "Invalid Method" ,
+            Self::InvalidMethod => "Invalid Method",
         }
     }
 }
 
 impl From<MethodError> for ParseError {
     fn from(_: MethodError) -> Self {
-        Self::InvalidMethod 
+        Self::InvalidMethod
     }
 }
 
 impl From<Utf8Error> for ParseError {
     fn from(_: Utf8Error) -> Self {
-        Self::InvalidEncoding 
+        Self::InvalidEncoding
     }
 }
 
@@ -99,6 +96,4 @@ impl Debug for ParseError {
     }
 }
 
-impl Error for ParseError {
-
-}
+impl Error for ParseError {}
